@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker TODO App</title>
+
+    <style>
+        :root {
+            --main: #22b8cf;
+            --main-dark: #1098ad;
+            --bg: #eef3f7;
+            --card: #ffffff;
+            --text: #1f2933;
+            --muted: #74808c;
+            --danger: #fa5252;
+            --danger-dark: #e03131;
+            --border: #dde5ec;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(34, 184, 207, 0.18), transparent 32%),
+                linear-gradient(135deg, #f8fbfd 0%, var(--bg) 100%);
+            color: var(--text);
+        }
+
+        .container {
+            width: min(680px, calc(100% - 32px));
+            margin: 64px auto;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            margin-bottom: 14px;
+            border-radius: 999px;
+            background: rgba(34, 184, 207, 0.12);
+            color: var(--main-dark);
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(2rem, 5vw, 3rem);
+            letter-spacing: -0.04em;
+        }
+
+        .subtitle {
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: 0.98rem;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 24px;
+            box-shadow: 0 20px 45px rgba(31, 41, 51, 0.10);
+            padding: 22px;
+            backdrop-filter: blur(10px);
+        }
+
+        .input-area {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            font-size: 1rem;
+            background: #fff;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--main);
+            box-shadow: 0 0 0 4px rgba(34, 184, 207, 0.15);
+        }
+
+        button {
+            border: none;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .add-button {
+            padding: 0 22px;
+            background: var(--main);
+            color: white;
+        }
+
+        .add-button:hover {
+            background: var(--main-dark);
+            transform: translateY(-1px);
+        }
+
+        .add-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 2px 14px;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .error {
+            display: none;
+            margin-bottom: 14px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: #fff5f5;
+            color: var(--danger-dark);
+            border: 1px solid #ffc9c9;
+            font-size: 0.92rem;
+        }
+
+        .empty {
+            padding: 34px 16px;
+            text-align: center;
+            color: var(--muted);
+            border: 1px dashed var(--border);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.6);
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: 12px;
+        }
+
+        li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 15px 16px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-left: 5px solid var(--main);
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(31, 41, 51, 0.06);
+        }
+
+        .todo-title {
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+        }
+
+        .delete-button {
+            flex-shrink: 0;
+            padding: 8px 12px;
+            background: #fff0f0;
+            color: var(--danger-dark);
+        }
+
+        .delete-button:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        @media (max-width: 520px) {
+            .container {
+                margin: 32px auto;
+            }
+
+            .panel {
+                padding: 16px;
+                border-radius: 20px;
+            }
+
+            .input-area {
+                flex-direction: column;
+            }
+
+            .add-button {
+                padding: 14px 18px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <section class="hero">
+            <div class="badge">Docker / FastAPI / PostgreSQL</div>
+            <h1>📝 TODO App</h1>
+            <p class="subtitle">コンテナ上のPostgreSQLにタスクを保存するシンプルなTODOアプリ</p>
+        </section>
+
+        <section class="panel">
+            <form class="input-area" id="todo-form">
+                <input
+                    type="text"
+                    id="todo-input"
+                    placeholder="新しいタスクを入力..."
+                    maxlength="200"
+                    autocomplete="off"
+                >
+                <button class="add-button" id="add-button" type="submit">追加</button>
+            </form>
+
+            <div class="error" id="error-message"></div>
+
+            <div class="meta">
+                <span id="status-text">読み込み中...</span>
+                <span id="todo-count">0件</span>
+            </div>
+
+            <div class="empty" id="empty-message" hidden>
+                まだTODOがありません。最初のタスクを追加してみましょう。
+            </div>
+
+            <ul id="todo-list"></ul>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = "/todos";
+
+        const form = document.getElementById("todo-form");
+        const input = document.getElementById("todo-input");
+        const addButton = document.getElementById("add-button");
+        const list = document.getElementById("todo-list");
+        const count = document.getElementById("todo-count");
+        const statusText = document.getElementById("status-text");
+        const emptyMessage = document.getElementById("empty-message");
+        const errorMessage = document.getElementById("error-message");
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = "block";
+        }
+
+        function clearError() {
+            errorMessage.textContent = "";
+            errorMessage.style.display = "none";
+        }
+
+        function renderTodos(todos) {
+            list.innerHTML = "";
+            count.textContent = `${todos.length}件`;
+            emptyMessage.hidden = todos.length !== 0;
+
+            todos.forEach((todo) => {
+                const li = document.createElement("li");
+
+                const title = document.createElement("span");
+                title.className = "todo-title";
+                title.textContent = todo.title;
+
+                const deleteButton = document.createElement("button");
+                deleteButton.className = "delete-button";
+                deleteButton.type = "button";
+                deleteButton.textContent = "削除";
+                deleteButton.addEventListener("click", () => deleteTodo(todo.id));
+
+                li.appendChild(title);
+                li.appendChild(deleteButton);
+                list.appendChild(li);
+            });
+        }
+
+        async function fetchTodos() {
+            clearError();
+            statusText.textContent = "読み込み中...";
+
+            try {
+                const res = await fetch(API_URL);
+
+                if (!res.ok) {
+                    throw new Error("TODO一覧の取得に失敗しました。");
+                }
+
+                const todos = await res.json();
+                renderTodos(todos);
+                statusText.textContent = "同期済み";
+            } catch (error) {
+                statusText.textContent = "エラー";
+                showError(error.message);
+            }
+        }
+
+        async function addTodo(event) {
+            event.preventDefault();
+
+            const title = input.value.trim();
+
+            if (!title) {
+                input.focus();
+                return;
+            }
+
+            clearError();
+            addButton.disabled = true;
+            addButton.textContent = "追加中...";
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ title })
+                });
+
+                if (!res.ok) {
+                    throw new Error("TODOの追加に失敗しました。");
+                }
+
+                input.value = "";
+                await fetchTodos();
+                input.focus();
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                addButton.disabled = false;
+                addButton.textContent = "追加";
+            }
+        }
+
+        async function deleteTodo(id) {
+            clearError();
+
+            try {
+                const res = await fetch(`${API_URL}/${id}`, {
+                    method: "DELETE"
+                });
+
+                if (!res.ok) {
+                    throw new Error("TODOの削除に失敗しました。");
+                }
+
+                await fetchTodos();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        form.addEventListener("submit", addTodo);
+
+        fetchTodos();
+    </script>
+</body>
+</html>
