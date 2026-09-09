@@ -20,6 +20,10 @@
             --tag-text: #3730a3;
             --link-bg: #ecfeff;
             --link-text: #0e7490;
+            --ops-bg: #f0fdf4;
+            --ops-text: #166534;
+            --port-bg: #fff7ed;
+            --port-text: #9a3412;
         }
 
         * {
@@ -91,6 +95,13 @@
         .input-area {
             display: flex;
             gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
             margin-bottom: 18px;
         }
 
@@ -135,6 +146,19 @@
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
+        }
+
+        .quick-button {
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: #374151;
+            font-size: 0.84rem;
+        }
+
+        .quick-button:hover {
+            border-color: var(--main);
+            color: var(--main-dark);
         }
 
         .meta {
@@ -229,6 +253,16 @@
             outline: 2px solid rgba(14, 116, 144, 0.18);
         }
 
+        .chip-ops {
+            background: var(--ops-bg);
+            color: var(--ops-text);
+        }
+
+        .chip-port {
+            background: var(--port-bg);
+            color: var(--port-text);
+        }
+
         .delete-button {
             flex-shrink: 0;
             padding: 8px 12px;
@@ -266,9 +300,9 @@
     <main class="container">
         <section class="hero">
             <div class="badge">Docker / FastAPI / PostgreSQL</div>
-            <h1>Local GitHub Queue</h1>
-            <p class="subtitle">GitHub Issue/PR と調査メモを、手元のPostgreSQLだけに残すTODO</p>
-            <p class="hint">Issue URL、PR URL、`owner/repo#123`、`#tag` をそのまま貼ると、あとで戻りやすい作業キューになります。</p>
+            <h1>Local Ops Queue</h1>
+            <p class="subtitle">Docker、DB、GitHub Issue/PR の作業メモを手元のPostgreSQLだけに残すTODO</p>
+            <p class="hint">`docker ps` の気づき、ポート衝突、Issue URL、`owner/repo#123`、`#tag` をそのまま残せます。</p>
         </section>
 
         <section class="panel">
@@ -276,12 +310,18 @@
                 <input
                     type="text"
                     id="todo-input"
-                    placeholder="Issue URL、owner/repo#123、#tag、作業メモ"
+                    placeholder="docker、postgres、neo4j、5432、Issue URL、#tag"
                     maxlength="200"
                     autocomplete="off"
                 >
                 <button class="add-button" id="add-button" type="submit">追加</button>
             </form>
+
+            <div class="quick-actions">
+                <button class="quick-button" type="button" data-template="docker ps -aで起動中コンテナを確認 #docker">Docker確認</button>
+                <button class="quick-button" type="button" data-template="5432を使っているコンテナを特定 #port #postgres">5432調査</button>
+                <button class="quick-button" type="button" data-template="restart policyがalwaysのコンテナを見直す #docker #cleanup">自動起動整理</button>
+            </div>
 
             <div class="error" id="error-message"></div>
 
@@ -291,7 +331,7 @@
             </div>
 
             <div class="empty" id="empty-message" hidden>
-                まだキューがありません。GitHub URLや作業メモを追加できます。
+                まだキューがありません。Docker状態や作業メモを追加できます。
             </div>
 
             <ul id="todo-list"></ul>
@@ -309,6 +349,7 @@
         const statusText = document.getElementById("status-text");
         const emptyMessage = document.getElementById("empty-message");
         const errorMessage = document.getElementById("error-message");
+        const quickButtons = document.querySelectorAll(".quick-button");
 
         function showError(message) {
             errorMessage.textContent = message;
@@ -324,10 +365,14 @@
             const githubUrlPattern = /https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/(issues|pull)\/(\d+)/i;
             const shorthandPattern = /\b([\w.-]+\/[\w.-]+)#(\d+)\b/;
             const tagPattern = /(^|\s)#([A-Za-z0-9_-]{1,32})\b/g;
+            const opsPattern = /\b(docker|compose|postgres|postgresql|neo4j|restart policy|dbeaver|deploy|db)\b/ig;
+            const portPattern = /\b([1-9]\d{3,4})\b/g;
 
             const githubUrl = value.match(githubUrlPattern);
             const shorthand = value.match(shorthandPattern);
             const tags = [...value.matchAll(tagPattern)].map((match) => match[2]);
+            const ops = [...new Set([...value.matchAll(opsPattern)].map((match) => match[1].toLowerCase()))];
+            const ports = [...new Set([...value.matchAll(portPattern)].map((match) => match[1]))];
 
             if (githubUrl) {
                 const [, repo, type, number] = githubUrl;
@@ -336,7 +381,9 @@
                     number,
                     url: githubUrl[0],
                     kind: type === "pull" ? "PR" : "Issue",
-                    tags
+                    tags,
+                    ops,
+                    ports
                 };
             }
 
@@ -347,11 +394,13 @@
                     number,
                     url: `https://github.com/${repo}/issues/${number}`,
                     kind: "Issue",
-                    tags
+                    tags,
+                    ops,
+                    ports
                 };
             }
 
-            return { tags };
+            return { tags, ops, ports };
         }
 
         function renderTodos(todos) {
@@ -389,6 +438,20 @@
                         tagChip.className = "chip chip-tag";
                         tagChip.textContent = `#${tag}`;
                         meta.appendChild(tagChip);
+                    });
+
+                    parsed.ops.forEach((keyword) => {
+                        const opsChip = document.createElement("span");
+                        opsChip.className = "chip chip-ops";
+                        opsChip.textContent = keyword;
+                        meta.appendChild(opsChip);
+                    });
+
+                    parsed.ports.forEach((port) => {
+                        const portChip = document.createElement("span");
+                        portChip.className = "chip chip-port";
+                        portChip.textContent = `port ${port}`;
+                        meta.appendChild(portChip);
                     });
 
                     body.appendChild(meta);
@@ -483,6 +546,13 @@
         }
 
         form.addEventListener("submit", addTodo);
+
+        quickButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                input.value = button.dataset.template;
+                input.focus();
+            });
+        });
 
         fetchTodos();
     </script>

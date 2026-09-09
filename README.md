@@ -2,7 +2,7 @@
 
 FastAPI、PostgreSQL、Docker Compose で動くシンプルな TODO アプリです。
 
-GitHub Issue/PR URL や `owner/repo#123` を貼ると、ローカルの作業キューとしてリンクやタグを見やすく表示します。GitHub側に書き込まないので、未整理の作業メモや公開前の調査TODOを手元だけに残せます。
+Docker、DB、GitHub Issue/PR URL、`owner/repo#123` を貼ると、ローカルの作業キューとしてキーワードやタグを見やすく表示します。外部サービスに書き込まないので、未整理の調査メモや次回作業TODOを手元だけに残せます。
 
 ## 公開前の注意
 
