@@ -7,8 +7,8 @@
 
     <style>
         :root {
-            --main: #22b8cf;
-            --main-dark: #1098ad;
+            --main: #2563eb;
+            --main-dark: #1d4ed8;
             --bg: #eef3f7;
             --card: #ffffff;
             --text: #1f2933;
@@ -16,6 +16,10 @@
             --danger: #fa5252;
             --danger-dark: #e03131;
             --border: #dde5ec;
+            --tag-bg: #eef2ff;
+            --tag-text: #3730a3;
+            --link-bg: #ecfeff;
+            --link-text: #0e7490;
         }
 
         * {
@@ -33,8 +37,8 @@
         }
 
         .container {
-            width: min(680px, calc(100% - 32px));
-            margin: 64px auto;
+            width: min(760px, calc(100% - 32px));
+            margin: 48px auto;
         }
 
         .hero {
@@ -48,7 +52,7 @@
             gap: 6px;
             padding: 6px 12px;
             margin-bottom: 14px;
-            border-radius: 999px;
+            border-radius: 8px;
             background: rgba(34, 184, 207, 0.12);
             color: var(--main-dark);
             font-size: 0.85rem;
@@ -67,10 +71,18 @@
             font-size: 0.98rem;
         }
 
+        .hint {
+            margin: 12px auto 0;
+            max-width: 560px;
+            color: #52606d;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
         .panel {
             background: rgba(255, 255, 255, 0.88);
             border: 1px solid rgba(255, 255, 255, 0.7);
-            border-radius: 24px;
+            border-radius: 8px;
             box-shadow: 0 20px 45px rgba(31, 41, 51, 0.10);
             padding: 22px;
             backdrop-filter: blur(10px);
@@ -87,7 +99,7 @@
             min-width: 0;
             padding: 14px 16px;
             border: 1px solid var(--border);
-            border-radius: 14px;
+            border-radius: 8px;
             font-size: 1rem;
             background: #fff;
             outline: none;
@@ -101,7 +113,7 @@
 
         button {
             border: none;
-            border-radius: 14px;
+            border-radius: 8px;
             font-size: 0.95rem;
             font-weight: 700;
             cursor: pointer;
@@ -150,7 +162,7 @@
             text-align: center;
             color: var(--muted);
             border: 1px dashed var(--border);
-            border-radius: 18px;
+            border-radius: 8px;
             background: rgba(255, 255, 255, 0.6);
         }
 
@@ -171,13 +183,50 @@
             background: var(--card);
             border: 1px solid var(--border);
             border-left: 5px solid var(--main);
-            border-radius: 16px;
+            border-radius: 8px;
             box-shadow: 0 8px 20px rgba(31, 41, 51, 0.06);
         }
 
         .todo-title {
             line-height: 1.5;
             overflow-wrap: anywhere;
+        }
+
+        .todo-main {
+            min-width: 0;
+            display: grid;
+            gap: 8px;
+        }
+
+        .todo-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 26px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .chip-tag {
+            background: var(--tag-bg);
+            color: var(--tag-text);
+        }
+
+        .chip-link {
+            background: var(--link-bg);
+            color: var(--link-text);
+        }
+
+        .chip-link:hover {
+            outline: 2px solid rgba(14, 116, 144, 0.18);
         }
 
         .delete-button {
@@ -199,7 +248,7 @@
 
             .panel {
                 padding: 16px;
-                border-radius: 20px;
+                border-radius: 8px;
             }
 
             .input-area {
@@ -217,8 +266,9 @@
     <main class="container">
         <section class="hero">
             <div class="badge">Docker / FastAPI / PostgreSQL</div>
-            <h1>📝 TODO App</h1>
-            <p class="subtitle">コンテナ上のPostgreSQLにタスクを保存するシンプルなTODOアプリ</p>
+            <h1>Local GitHub Queue</h1>
+            <p class="subtitle">GitHub Issue/PR と調査メモを、手元のPostgreSQLだけに残すTODO</p>
+            <p class="hint">Issue URL、PR URL、`owner/repo#123`、`#tag` をそのまま貼ると、あとで戻りやすい作業キューになります。</p>
         </section>
 
         <section class="panel">
@@ -226,7 +276,7 @@
                 <input
                     type="text"
                     id="todo-input"
-                    placeholder="新しいタスクを入力..."
+                    placeholder="Issue URL、owner/repo#123、#tag、作業メモ"
                     maxlength="200"
                     autocomplete="off"
                 >
@@ -241,7 +291,7 @@
             </div>
 
             <div class="empty" id="empty-message" hidden>
-                まだTODOがありません。最初のタスクを追加してみましょう。
+                まだキューがありません。GitHub URLや作業メモを追加できます。
             </div>
 
             <ul id="todo-list"></ul>
@@ -270,6 +320,40 @@
             errorMessage.style.display = "none";
         }
 
+        function parseTodoTitle(value) {
+            const githubUrlPattern = /https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/(issues|pull)\/(\d+)/i;
+            const shorthandPattern = /\b([\w.-]+\/[\w.-]+)#(\d+)\b/;
+            const tagPattern = /(^|\s)#([A-Za-z0-9_-]{1,32})\b/g;
+
+            const githubUrl = value.match(githubUrlPattern);
+            const shorthand = value.match(shorthandPattern);
+            const tags = [...value.matchAll(tagPattern)].map((match) => match[2]);
+
+            if (githubUrl) {
+                const [, repo, type, number] = githubUrl;
+                return {
+                    repo,
+                    number,
+                    url: githubUrl[0],
+                    kind: type === "pull" ? "PR" : "Issue",
+                    tags
+                };
+            }
+
+            if (shorthand) {
+                const [, repo, number] = shorthand;
+                return {
+                    repo,
+                    number,
+                    url: `https://github.com/${repo}/issues/${number}`,
+                    kind: "Issue",
+                    tags
+                };
+            }
+
+            return { tags };
+        }
+
         function renderTodos(todos) {
             list.innerHTML = "";
             count.textContent = `${todos.length}件`;
@@ -277,10 +361,38 @@
 
             todos.forEach((todo) => {
                 const li = document.createElement("li");
+                const parsed = parseTodoTitle(todo.title);
+                const body = document.createElement("div");
+                body.className = "todo-main";
 
                 const title = document.createElement("span");
                 title.className = "todo-title";
                 title.textContent = todo.title;
+                body.appendChild(title);
+
+                if (parsed.url || parsed.tags.length > 0) {
+                    const meta = document.createElement("div");
+                    meta.className = "todo-meta";
+
+                    if (parsed.url) {
+                        const link = document.createElement("a");
+                        link.className = "chip chip-link";
+                        link.href = parsed.url;
+                        link.target = "_blank";
+                        link.rel = "noreferrer";
+                        link.textContent = `${parsed.kind} ${parsed.repo}#${parsed.number}`;
+                        meta.appendChild(link);
+                    }
+
+                    parsed.tags.forEach((tag) => {
+                        const tagChip = document.createElement("span");
+                        tagChip.className = "chip chip-tag";
+                        tagChip.textContent = `#${tag}`;
+                        meta.appendChild(tagChip);
+                    });
+
+                    body.appendChild(meta);
+                }
 
                 const deleteButton = document.createElement("button");
                 deleteButton.className = "delete-button";
@@ -288,7 +400,7 @@
                 deleteButton.textContent = "削除";
                 deleteButton.addEventListener("click", () => deleteTodo(todo.id));
 
-                li.appendChild(title);
+                li.appendChild(body);
                 li.appendChild(deleteButton);
                 list.appendChild(li);
             });

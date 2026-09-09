@@ -2,6 +2,8 @@
 
 FastAPI、PostgreSQL、Docker Compose で動くシンプルな TODO アプリです。
 
+GitHub Issue/PR URL や `owner/repo#123` を貼ると、ローカルの作業キューとしてリンクやタグを見やすく表示します。GitHub側に書き込まないので、未整理の作業メモや公開前の調査TODOを手元だけに残せます。
+
 ## 公開前の注意
 
 - `.env` にはDBユーザー名やパスワードなどの秘密情報が入るため、GitHubにはアップロードしません。
@@ -27,6 +29,27 @@ DB_NAME=tododb
 
 公開用のサンプル値なので、外部に公開する環境では別の強い値に変更してください。
 
+### ローカルDBのパスワードを忘れた/変えたい場合
+
+PostgreSQLのDockerボリュームを初期化済みの場合、`.env` の `DB_PASSWORD` を変えるだけでは既存DBユーザーのパスワードは変わりません。
+
+データを捨ててよい場合は、`.env` を更新してからDBボリュームごと作り直します。
+
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
+データを残したい場合は、`.env` を更新したあとDBコンテナを作り直し、PostgreSQL側のパスワードも変更します。
+
+```bash
+docker compose up -d --force-recreate db
+docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "ALTER USER \"$POSTGRES_USER\" WITH PASSWORD '\''$POSTGRES_PASSWORD'\'';"'
+docker compose up -d --force-recreate web
+```
+
+現在のWSL環境で `docker` が見つからない場合は、Docker Desktop の WSL integration を有効にしてから実行してください。
+
 2. コンテナを起動します。
 
 ```bash
@@ -41,9 +64,9 @@ http://localhost:8000
 
 ## 補足
 
-- `todo-gate` ネットワークは Docker Compose が自動作成します。
+- `todo-gate` ネットワークは Docker Compose がプロジェクト用ネットワークとして自動作成します。
 - PostgreSQL のデータは `db_data` ボリュームに保存されます。
-- DB を外部ツールから見る場合は `localhost:5432` に接続します。
+- DB を外部ツールから見る場合は `localhost:5433` に接続します。
 
 ## よく使うコマンド
 
