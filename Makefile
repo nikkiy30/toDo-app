@@ -1,6 +1,6 @@
 COMPOSE := docker compose -p github-todo-app
 
-.PHONY: help start stop restart status logs logs-db logs-web db-shell check url
+.PHONY: help start stop restart status logs logs-db logs-web db-shell check url pre-push-check install-hooks
 
 help:
 	@echo "Local Learning Queue"
@@ -14,6 +14,10 @@ help:
 	@echo "  make db-shell  Open psql in todo-db"
 	@echo "  make check     Check app and API health"
 	@echo "  make url       Print local URLs"
+	@echo "  make pre-push-check"
+	@echo "                 Check for accidental files before pushing"
+	@echo "  make install-hooks"
+	@echo "                 Install the local pre-push safety hook"
 
 start:
 	$(COMPOSE) up -d --build
@@ -48,3 +52,12 @@ check:
 url:
 	@echo "App: http://localhost:8000"
 	@echo "DB:  localhost:5433"
+
+pre-push-check:
+	@scripts/pre-push-check.sh
+
+install-hooks:
+	@mkdir -p .git/hooks
+	@printf '%s\n' '#!/usr/bin/env sh' 'exec scripts/pre-push-check.sh "$$@"' > .git/hooks/pre-push
+	@chmod +x .git/hooks/pre-push scripts/pre-push-check.sh
+	@echo "Installed .git/hooks/pre-push"
