@@ -36,16 +36,16 @@ PostgreSQLのDockerボリュームを初期化済みの場合、`.env` の `DB_P
 データを捨ててよい場合は、`.env` を更新してからDBボリュームごと作り直します。
 
 ```bash
-docker compose down -v
-docker compose up -d --build
+docker compose -p github-todo-app down -v
+make start
 ```
 
 データを残したい場合は、`.env` を更新したあとDBコンテナを作り直し、PostgreSQL側のパスワードも変更します。
 
 ```bash
-docker compose up -d --force-recreate db
-docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "ALTER USER \"$POSTGRES_USER\" WITH PASSWORD '\''$POSTGRES_PASSWORD'\'';"'
-docker compose up -d --force-recreate web
+docker compose -p github-todo-app up -d --force-recreate db
+docker compose -p github-todo-app exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "ALTER USER \"$POSTGRES_USER\" WITH PASSWORD '\''$POSTGRES_PASSWORD'\'';"'
+docker compose -p github-todo-app up -d --force-recreate web
 ```
 
 現在のWSL環境で `docker` が見つからない場合は、Docker Desktop の WSL integration を有効にしてから実行してください。
@@ -53,10 +53,32 @@ docker compose up -d --force-recreate web
 2. コンテナを起動します。
 
 ```bash
-docker compose up -d --build
+make start
 ```
 
 3. ブラウザで開きます。
+
+```text
+http://localhost:8000
+```
+
+## 毎日使うコマンド
+
+Docker Composeの細かいコマンドを覚えなくても使えるように、よく使う操作は `Makefile` にまとめています。
+
+```bash
+make start
+make status
+make stop
+```
+
+- `make start`: ローカルアプリを起動します。
+- `make status`: `todo-db` と `todo-web` の状態を確認します。
+- `make stop`: DBデータを残したままコンテナを止めます。
+- `make check`: `http://localhost:8000` と `/todos` の疎通を確認します。
+- `make db-shell`: `todo-db` のPostgreSQLに入ります。
+
+起動後のURL:
 
 ```text
 http://localhost:8000
@@ -71,7 +93,7 @@ http://localhost:8000
 ## よく使うコマンド
 
 ```bash
-docker compose logs web
-docker compose logs db
-docker compose down
+make logs-web
+make logs-db
+make stop
 ```

@@ -1,3 +1,5 @@
+name: github-todo-app
+
 services:
   # 1台目：データベース
   db:

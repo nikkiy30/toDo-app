@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Docker TODO App</title>
+    <title>Local Learning Queue</title>
 
     <style>
         :root {
@@ -90,6 +90,36 @@
             box-shadow: 0 20px 45px rgba(31, 41, 51, 0.10);
             padding: 22px;
             backdrop-filter: blur(10px);
+        }
+
+        .learning-flow {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .flow-step {
+            min-width: 0;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .flow-label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--main-dark);
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        .flow-step p {
+            margin: 0;
+            color: #374151;
+            font-size: 0.86rem;
+            line-height: 1.5;
         }
 
         .input-area {
@@ -292,6 +322,10 @@
             .add-button {
                 padding: 14px 18px;
             }
+
+            .learning-flow {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -300,17 +334,32 @@
     <main class="container">
         <section class="hero">
             <div class="badge">Docker / FastAPI / PostgreSQL</div>
-            <h1>Local Ops Queue</h1>
-            <p class="subtitle">Docker、DB、GitHub Issue/PR の作業メモを手元のPostgreSQLだけに残すTODO</p>
-            <p class="hint">`docker ps` の気づき、ポート衝突、Issue URL、`owner/repo#123`、`#tag` をそのまま残せます。</p>
+            <h1>Local Learning Queue</h1>
+            <p class="subtitle">ローカル環境の詰まり、気づき、次の改善を手元のPostgreSQLに残すTODO</p>
+            <p class="hint">Docker、DB、ポート衝突、Issue URL、`#learned`、`#next` をそのまま残して、次回の作業に戻れます。</p>
         </section>
 
         <section class="panel">
+            <div class="learning-flow">
+                <div class="flow-step">
+                    <span class="flow-label">1. 詰まり</span>
+                    <p>起きた現象をそのまま残す。例: 5432が使えない。</p>
+                </div>
+                <div class="flow-step">
+                    <span class="flow-label">2. 学び</span>
+                    <p>原因や仕組みに変える。例: restart policy。</p>
+                </div>
+                <div class="flow-step">
+                    <span class="flow-label">3. 次の改善</span>
+                    <p>次回の確認や運用ルールにする。例: docker ps。</p>
+                </div>
+            </div>
+
             <form class="input-area" id="todo-form">
                 <input
                     type="text"
                     id="todo-input"
-                    placeholder="docker、postgres、neo4j、5432、Issue URL、#tag"
+                    placeholder="気づき、詰まり、改善案、docker、5432、#learned、#next"
                     maxlength="200"
                     autocomplete="off"
                 >
@@ -318,9 +367,9 @@
             </form>
 
             <div class="quick-actions">
-                <button class="quick-button" type="button" data-template="docker ps -aで起動中コンテナを確認 #docker">Docker確認</button>
-                <button class="quick-button" type="button" data-template="5432を使っているコンテナを特定 #port #postgres">5432調査</button>
-                <button class="quick-button" type="button" data-template="restart policyがalwaysのコンテナを見直す #docker #cleanup">自動起動整理</button>
+                <button class="quick-button" type="button" data-template="詰まったこと: docker ps -aで起動中コンテナを確認 #docker #stuck">詰まり</button>
+                <button class="quick-button" type="button" data-template="学んだこと: 5433:5432はPC側5433をコンテナ側5432へ流す #learned #port">学び</button>
+                <button class="quick-button" type="button" data-template="次に改善: restart policyがalwaysのコンテナを定期的に見直す #next #docker">次の改善</button>
             </div>
 
             <div class="error" id="error-message"></div>
@@ -331,7 +380,7 @@
             </div>
 
             <div class="empty" id="empty-message" hidden>
-                まだキューがありません。Docker状態や作業メモを追加できます。
+                まだメモがありません。今日の詰まりや次の改善を追加できます。
             </div>
 
             <ul id="todo-list"></ul>
